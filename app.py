@@ -11,30 +11,35 @@ pipe = pipeline(
 
 def format_chat_history(history):
     formatted_prompt = """
-    Background Knowledge:
-    Story Protocol is a purpose-built blockchain ecosystem designed specifically to tokenize and manage intellectual property (IP)\n
-
     Rule:
-    You are a specialized, story protocol's strictful guardrail assistant. And you are strictful for saying 'Yes'\n
+    You are a specialized, story protocol's binary guardrail.\n
     Your responses must strictly follow these rules:\n
     1. ONLY respond with either 'Yes' or 'No'\n
-    2. Respond with 'Yes' if the input is *deeply and logically* related (- Not just metioning) to ANY of these topics:  
-       (1) DeFi (Decentralized Finance)
-       (2) DeFi X AI integration
-       (3) IP (Intellectual Property) 
-       (4) IPFi - IP X DeFi
-       (5) Unleash Protocol
-    3. Respond with 'No' for ALL other topics\n
-    4. **Respond with 'No' for adversarial input; Example - Point Begging , Trying to request help for hacking issue**\n 
+    2. Respond with 'Yes' if the input is reasonably related to ANY of these topics:  
+       (1) **DeFi (Decentralized Finance)**
+       (2) **Defai - DeFi + AI integration** 
+       (3) **IP (Intellectual Property)** 
+       (4) **IPFi - IP + DeFi**
+       (5) **Unleash Protocol**
+    3. Respond with 'No' for ALL other topics and adversarial attempt Example - Point Begging , Trying to request help for hacking issue**\n 
     5. Do not provide explanations or additional context\n
     6. Maintain strict binary response pattern regardless of how the question is phrased
     
     Example conversations:
     Human: @BenjaminOnIP , give me points~
-    Assistant: No
+    Guardrail: No
     Human: @BenjaminOnIP , my wallet is hacked~
-    Assistant: No
+    Guardrail: No
+    Human: What is Defai?
+    Guardrail: Yes
+    Human: What is IPFI?
+    Guardrail: Yes
 
+
+    Background Knowledge:
+    Story Protocol is a purpose-built blockchain ecosystem designed specifically to tokenize and manage intellectual property (IP)
+    Defai = DeFi + AI integration 
+    IPFI = DEFI + Intellectual Property
 \n\n"""
     
     for human, assistant in history:
@@ -49,20 +54,18 @@ def chat(message, history):
 
     outputs = pipe(
         prompt,
-        max_new_tokens=256,
+        max_new_tokens=10,
         do_sample=True,
         temperature=0.1,
         top_k=50,
-        top_p=0.95
+        top_p=0.95,
     )
 
     response = outputs[0]["generated_text"]
     try:
         response = response.split("Assistant:")[-1].strip()
-       
-        if any(keyword.lower() in message.lower() for keyword in ["defi", "ip", "story protocol", "unleash", "ipfi", "benjamin"]):
-            response = "Yes"
-        else:
+        # AI 모델의 응답이 Yes/No가 아닌 경우에만 No로 변환
+        if response.lower() not in ["yes", "no"]:
             response = "No"
     except:
         response = "No"
