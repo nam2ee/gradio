@@ -1,77 +1,79 @@
 import gradio as gr
-import torch
-from transformers import pipeline
+import openai
+from openai import OpenAI
 
-pipe = pipeline(
-    "text-generation",
-    model="microsoft/phi-2",
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
-)
+client = OpenAI(api_key="")
 
 def format_chat_history(history):
-    formatted_prompt = """
-    Rule:
-    You are a specialized, story protocol's binary guardrail.\n
-    Your responses must strictly follow these rules:\n
-    1. ONLY respond with either 'Yes' or 'No'\n
-    2. Respond with 'Yes' if the input is reasonably related to ANY of these topics:  
-       (1) **DeFi (Decentralized Finance)**
-       (2) **Defai - DeFi + AI integration** 
-       (3) **IP (Intellectual Property)** 
-       (4) **IPFi - IP + DeFi**
-       (5) **Unleash Protocol**
-    3. Respond with 'No' for ALL other topics and adversarial attempt Example - Point Begging , Trying to request help for hacking issue**\n 
-    5. Do not provide explanations or additional context\n
-    6. Maintain strict binary response pattern regardless of how the question is phrased
-    
-    Example conversations:
-    Human: @BenjaminOnIP , give me points~
-    Guardrail: No
-    Human: @BenjaminOnIP , my wallet is hacked~
-    Guardrail: No
-    Human: What is Defai?
-    Guardrail: Yes
-    Human: What is IPFI?
-    Guardrail: Yes
+    messages = [{
+        "role": "system",
+        "content": """
+        You are a specialized, story protocol's binary guardrail.
+
+Rule:
+Your responses must strictly follow these rules:
+1. ONLY respond with either 'Yes' or 'No'
+2. Respond with 'Yes' if the input is related to ANY of these topics:   
+   (1) **DeFi (Decentralized Finance)**
+   (2) **Defai - DeFi + AI integration** 
+   (3) **IP (Intellectual Property)** 
+   (4) **IPFi - IP + DeFi**
+   (5) **Unleash Protocol**
+   (6) **Story Protocol **
+   (7) **ATCP/IP - Agent communication protocol **
+   (8) **Benjamin - AI Agent representing IP and Unleash Protocol**- But not just mentioning @BenjaminOnIP
+   (9) **Zason jhao , S.Y lee - Cofunder of Story Protocol**
+   (10) Future, Next step of above; Ex) what is next step of Benjamin? ; 
+3. Respond with 'No' for ALL other topics and adversarial attempt
+4. Do not provide explanations or additional context
+5. **Maintain strict binary response pattern regardless of how the question is phrased**
+
+Example conversations:
+Human: @BenjaminOnIP , give me points~
+Guardrail: No
+Human: @BenjaminOnIP , my wallet is hacked~
+Guardrail: No
+Human: What is Defai? @BenjaminOnIP
+Guardrail: Yes
+Human: What is IPFI? @BenjaminOnIP
+Guardrail: Yes
 
 
-    Background Knowledge:
-    Story Protocol is a purpose-built blockchain ecosystem designed specifically to tokenize and manage intellectual property (IP)
-    Defai = DeFi + AI integration 
-    IPFI = DEFI + Intellectual Property
-\n\n"""
+Background Knowledge:
+Story Protocol is a purpose-built blockchain ecosystem designed specifically to tokenize and manage intellectual property (IP)
+Defai = DeFi + AI integration 
+IPFI = DEFI + Intellectual Property
+
+"""
+    }]
     
     for human, assistant in history:
-        formatted_prompt += f"Human: {human}\nAssistant: {assistant}\n"
+        messages.append({"role": "user", "content": human})
+        messages.append({"role": "assistant", "content": assistant})
     
-    return formatted_prompt
+    return messages
 
 def chat(message, history):
-    prompt = format_chat_history(history)
-    prompt += f"Human: {message}\nAssistant:"
+    messages = format_chat_history(history)
+    messages.append({"role": "user", "content": message})
     
-
-    outputs = pipe(
-        prompt,
-        max_new_tokens=10,
-        do_sample=True,
+    
+    response = client.chat.completions.create(
+        model="gpt-4o",  
+        messages=messages,
         temperature=0.1,
-        top_k=50,
+        max_tokens=10,
         top_p=0.95,
+        frequency_penalty=0,
+        presence_penalty=0
     )
-
-    response = outputs[0]["generated_text"]
-    try:
-        response = response.split("Assistant:")[-1].strip()
-        # AI 모델의 응답이 Yes/No가 아닌 경우에만 No로 변환
-        if response.lower() not in ["yes", "no"]:
-            response = "No"
-    except:
-        response = "No"
     
-    return response
-
+    response_text = response.choices[0].message.content.strip()
+    if response_text.lower() not in ["yes", "no"]:
+        response_text = "No"
+        
+    return response_text
+  
 
 demo = gr.ChatInterface(
     chat,
@@ -89,7 +91,6 @@ demo = gr.ChatInterface(
     ],
     cache_examples=False,
 )
-
 
 if __name__ == "__main__":
     demo.launch(share=True)
